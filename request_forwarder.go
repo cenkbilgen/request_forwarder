@@ -72,13 +72,20 @@ func main() {
 			} else {
 				body := c.Request.Body
 				fmt.Printf("%v\n", body)
-				forwardRespBody, err := forwardRequest(h.Method, h.URL, body)
+			
+				header := map[string]string {
+					    "Content-Type": "application/json",
+					    "Authorization": "123",
+    		}
+				contentType, respBytes, err := forwardRequest(h.Method, h.URL, header, body)
 				if err != nil {
 					fmt.Printf("Error Returned: %v\n", err)
 					c.JSON(400, gin.H { "error": "1" })
 				} else {
-					fmt.Printf("Resp body %v\n", forwardRespBody)
-					c.JSON(http.StatusOK, gin.H {	"count": "1" })
+					fmt.Printf("Resp body type %v\n", contentType)
+					fmt.Printf("Resp body %v\n", string(respBytes))
+					// TODO: Check for empty type
+					c.Data(http.StatusOK, contentType, respBytes)
 				}
 			}
 
@@ -108,25 +115,29 @@ func isValidMethod(method string) bool {
 
 //
 
-func forwardRequest(method string, url string, body io.ReadCloser) (io.ReadCloser, error) {
-//  authToken := "Basic " + encodeClientSecretAndId()
-//     body := url.Values{}
-//     body.Set("grant_type", grantType)
-//     body.Set("redirect_uri", redirectUri)
-//     body.Set("code", code)
-//     encodedBody := body.Encode()
-
-    req, _ := http.NewRequest(method, url, body)
-    req.Header.Add("Content-Type", "application/json")
-    req.Header.Add("Authorization", "123")
+func forwardRequest(method string, url string, header map[string]string, body io.ReadCloser) (string, []byte, error) {
+    req, err := http.NewRequest(method, url, body)
+    if err != nil {
+    	return "", nil, err
+    }
+    for name, value := range header {
+    	req.Header.Set(name, value)
+    }    
+//     req.Header.Add("Content-Type", "application/json")
+//     req.Header.Add("Authorization", "123")
     
     client := &http.Client{}
-    res, err := client.Do(req)
+    resp, err := client.Do(req)
     if err != nil {
     	fmt.Printf("Request error %v\n", err)
-    	return nil, err
+    	return "", nil, err
     } else {
-    	fmt.Printf("Forward Response %v\n", res.Body)
-    	return res.Body, nil
+    	 bytes, err := io.ReadAll(resp.Body)
+   		 if err != nil {
+    	    return "", nil, err
+    	 }
+    	contentType := resp.Header.Get("Content-Type") // "" if none
+    	fmt.Printf("Recieved body: %v\n", string(bytes))
+    	return contentType, bytes, nil
     }
 }
