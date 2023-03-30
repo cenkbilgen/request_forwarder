@@ -13,9 +13,9 @@ import (
 //
 
 type forwardInfo struct {
-	URL    string `header:"X-RequestURL"`
-	Method string `header:"X-RequestMethod"`
-	Key    string `header:"X-RequestKey"`
+	URL    string `header:"X-Request-URL"`
+	Method string `header:"X-Request-Method"`
+	Key    string `header:"X-Request-Key"`
 }
 
 //
@@ -87,8 +87,8 @@ func main() {
 					// TODO: Check for empty type
 					c.Data(http.StatusOK, contentType, respBytes)
 				}
-			}
 
+ 			}
 		})
 	}
 
@@ -118,11 +118,14 @@ func isValidMethod(method string) bool {
 func forwardRequest(method string, url string, header map[string]string, body io.ReadCloser) (string, []byte, error) {
     req, err := http.NewRequest(method, url, body)
     if err != nil {
+    	fmt.Println("Forward Request Create Failed.")
     	return "", nil, err
     }
     for name, value := range header {
     	req.Header.Set(name, value)
-    }    
+    }   
+    
+    // Modifictations 
 //     req.Header.Add("Content-Type", "application/json")
 //     req.Header.Add("Authorization", "123")
     
