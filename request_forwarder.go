@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"time"
+	"encoding/base64"
 
 	"github.com/gin-gonic/gin"
 )
@@ -35,7 +37,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	currentKey := "123"
+//	currentKey := "XXX"
 
 	v1 := router.Group("/v1")
 	{
@@ -56,6 +58,10 @@ func main() {
 			}
 
 			fmt.Printf("%#v\n", h)
+
+			currentKey := makeCurrentKey()
+
+			fmt.Printf("current key: %v\n", currentKey)
 
 			if h.Key != currentKey {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -113,7 +119,11 @@ func isValidMethod(method string) bool {
 	}
 }
 
-//
+func makeCurrentKey() string {
+	stamp := time.Now().UTC().Format(time.DateOnly)
+	validKey := []byte(stamp)
+	return base64.RawStdEncoding.Strict().EncodeToString(validKey)
+}
 
 func forwardRequest(method string, url string, header map[string]string, body io.ReadCloser) (string, []byte, error) {
     req, err := http.NewRequest(method, url, body)
