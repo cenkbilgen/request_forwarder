@@ -28,7 +28,8 @@ func main() {
 
 	cl := cmdline.New()
 	cl.AddFlag("s", "https", "use https")
-	cl.AddArgument("port", "port to bind")
+	cl.AddOption("p", "port", "value", "port to bind")
+	cl.SetOptionDefault("p", "9100")
 	cl.Parse(os.Args)
 
 	//if len(os.Args) < 2 {
@@ -36,7 +37,7 @@ func main() {
 	//	os.Exit(1)
 	//}
 	//p//ort := os.Args[1]
-	port := cl.ArgumentValue("port")
+	port := cl.OptionValue("port")
 	fmt.Printf("port %#v\n", port)
 	portNumber, err := strconv.Atoi(port)
 	
