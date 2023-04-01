@@ -2,7 +2,10 @@ module cenkbilgen/request_forwarder
 
 go 1.20
 
-require github.com/gin-gonic/gin v1.9.0
+require (
+	github.com/galdor/go-cmdline v1.2.0
+	github.com/gin-gonic/gin v1.9.0
+)
 
 require (
 	github.com/bytedance/sonic v1.8.0 // indirect

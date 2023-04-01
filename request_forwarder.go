@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 
 	"github.com/gin-gonic/gin"
+	"github.com/galdor/go-cmdline"
 )
 
 //
@@ -25,17 +26,25 @@ type forwardInfo struct {
 func main() {
 	router := gin.Default()
 
-	if len(os.Args) < 2 {
-		fmt.Printf("no port specified\n")
-		os.Exit(1)
-	}
-	port := os.Args[1]
+	cl := cmdline.New()
+	cl.AddFlag("s", "https", "use https")
+	cl.AddArgument("port", "port to bind")
+	cl.Parse(os.Args)
+
+	//if len(os.Args) < 2 {
+	//	fmt.Printf("no port specified\n")
+	//	os.Exit(1)
+	//}
+	//p//ort := os.Args[1]
+	port := cl.ArgumentValue("port")
 	fmt.Printf("port %#v\n", port)
 	portNumber, err := strconv.Atoi(port)
+	
 	if err != nil || portNumber < 1024 || portNumber > 9999 {
 		fmt.Printf("invalid port\n")
 		os.Exit(2)
 	}
+
 
 //	currentKey := "XXX"
 
@@ -98,7 +107,11 @@ func main() {
 		})
 	}
 
-	router.Run(":" + port)
+	if cl.IsOptionSet("s") {
+		router.RunTLS(":" + port, "server.crt", "server.key")
+	} else {
+	 	router.Run(":" + port)
+ 	}
 }
 
 //
