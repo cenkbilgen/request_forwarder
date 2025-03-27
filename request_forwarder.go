@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 //
@@ -18,10 +19,8 @@ type forwardInfo struct {
 	Key    string `header:"X-Request-Key"`
 }
 
-// HeaderConfig stores header key-value pairs to add to forwarded requests
-type HeaderConfig struct {
-	Headers map[string]string `json:"headers"`
-}
+// KeyValuesMap stores a mapping of key IDs to their values
+type KeyValuesMap map[string]string
 
 //
 func main() {
@@ -29,7 +28,7 @@ func main() {
 	cl := cmdline.New()
 	cl.AddFlag("s", "https", "use https")
 	cl.AddOption("p", "port", "value", "port to bind")
-	cl.AddOption("h", "headers-file", "filename", "JSON file containing headers to add to forwarded requests")
+	cl.AddOption("h", "headers-file", "filename", "JSON file containing key ID to value mappings")
 	cl.SetOptionDefault("p", "9100")
 	cl.Parse(os.Args)
 	//if len(os.Args) < 2 {
@@ -46,12 +45,10 @@ func main() {
 		os.Exit(2)
 	}
 
-	// Initialize headers map
-	headerConfig := HeaderConfig{
-		Headers: make(map[string]string),
-	}
+	// Initialize key values map
+	keyValuesMap := make(KeyValuesMap)
 
-	// Read headers from file if provided
+	// Read key values from file if provided
 	if cl.IsOptionSet("h") {
 		headersFile := cl.OptionValue("headers-file")
 		file, err := os.Open(headersFile)
@@ -62,18 +59,12 @@ func main() {
 		defer file.Close()
 
 		decoder := json.NewDecoder(file)
-		if err := decoder.Decode(&headerConfig); err != nil {
+		if err := decoder.Decode(&keyValuesMap); err != nil {
 			fmt.Printf("Failed to parse headers file: %v\n", err)
 			os.Exit(4)
 		}
 
-		fmt.Printf("Loaded %d headers from %s\n", len(headerConfig.Headers), headersFile)
-	} else {
-		// Default headers if no file is provided
-		headerConfig.Headers = map[string]string{
-			"Content-Type":  "application/json",
-			"Authorization": "123",
-		}
+		fmt.Printf("Loaded %d key-value pairs from %s\n", len(keyValuesMap), headersFile)
 	}
 
 //	currentKey := "XXX"
@@ -109,8 +100,32 @@ func main() {
 			} else {
 				body := c.Request.Body
 				fmt.Printf("%v\n", body)
-			
-				contentType, respBytes, err := forwardRequest(h.Method, h.URL, headerConfig.Headers, body)
+				
+				// Extract X-Request-Key-* headers from the request
+				headers := make(map[string]string)
+				
+				// Process X-Request-Key-* headers
+				for name, values := range c.Request.Header {
+					if strings.HasPrefix(name, "X-Request-Key-") {
+						headerName := strings.TrimPrefix(name, "X-Request-Key-")
+						// The header value contains the keyID to look up
+						if len(values) > 0 && headerName != "" {
+							keyID := values[0]
+							// Look up the value for this key ID
+							if value, ok := keyValuesMap[keyID]; ok {
+								headers[headerName] = value
+								fmt.Printf("Adding header %s: %s from keyID %s\n", headerName, value, keyID)
+							}
+						}
+					}
+				}
+				
+				// Add default Content-Type if not already set
+				if _, ok := headers["Content-Type"]; !ok {
+					headers["Content-Type"] = "application/json"
+				}
+				
+				contentType, respBytes, err := forwardRequest(h.Method, h.URL, headers, body)
 				if err != nil {
 					fmt.Printf("Error Returned: %v\n", err)
 					c.JSON(400, gin.H { "error": "1" })
@@ -159,10 +174,6 @@ func forwardRequest(method string, url string, header map[string]string, body io
     	req.Header.Set(name, value)
     }   
     
-    // Modifictations 
-//     req.Header.Add("Content-Type", "application/json")
-//     req.Header.Add("Authorization", "123")
-    
     client := &http.Client{}
     resp, err := client.Do(req)
     if err != nil {
@@ -174,7 +185,7 @@ func forwardRequest(method string, url string, header map[string]string, body io
     	    return "", nil, err
     	 }
     	contentType := resp.Header.Get("Content-Type") // "" if none
-    	fmt.Printf("Recieved body: %v\n", string(bytes))
+    	fmt.Printf("Received body: %v\n", string(bytes))
     	return contentType, bytes, nil
     }
 }
