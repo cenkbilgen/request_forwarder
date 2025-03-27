@@ -36,7 +36,7 @@ func main() {
 	cl.AddFlag("s", "https", "use https")
 	cl.AddOption("p", "port", "value", "port to bind")
 	cl.AddOption("h", "headers-file", "filename", "JSON file containing key ID to value mappings")
-	cl.AddOption("v", "validate", "seed", "enable request validation with given seed (disabled by default)")
+	cl.AddOption("k", "validate-key-seed", "seed", "enable request validation with given seed (disabled by default)")
 	cl.SetOptionDefault("p", "9100")
 	cl.Parse(os.Args)
 	
