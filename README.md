@@ -1,26 +1,43 @@
-Service that just forwards incoming requests as-is, except for updating the http headers.
-So mobile apps can indirectly make calls to an key authenticated API service without bundling any secret keys.
+# Request Forwarder
 
-Where and how to forward is found in the incoming request headers:
+A very lightweight proxy service that forwards incoming requests while adding necessary authentication headers. So mobile apps can make API calls without bundling sensitive credentials.
 
-- `X-Request-URL`, where to forward, value should be a full URL
-- `X-Request-Method`, value should be GET, PUT or POST
-- `X-Request-Header-[header key to append when forwarding]`, key to append and keyID of the value 
+The forwarding details are extracted from specific headers in the incoming request:
 
-### Usage 
+- `X-Request-URL`: The complete URL where the request should be forwarded
+- `X-Request-Method`: The HTTP method to use (GET, PUT, or POST)
+- `X-Request-Key-[header_name]`: Maps to a keyID in the configuration file
 
-`./request_forwarder -p 9100 -s -h headers.json`
-- `-p 9100` Sets the port to 9100
-- `-s` Enables HTTPS mode. Will look for the certificate and key files named "server.crt" and "server.key" in the current directory. These files need to be present for the HTTPS server to start properly.
-- `-h headers.json` Specifies the JSON file containing headers to add to forwarded requests. Other header key-values are preserved.
+## Usage
 
-Sample `headers.json`
+```
+./request_forwarder -p 9100 -s -h headers.json
+```
+
+### Options
+
+- `-p PORT`: Port to listen on (default: 9100)
+- `-s`: Enable HTTPS (requires server.crt and server.key in the current directory)
+- `-h FILE`: Path to JSON file containing key-value mappings
+
+The headers file is a simple JSON dictionary mapping keyIDs to their values:
+
 ```json
 {
-  "key1": "abc"
+  "key1": "abc",
   "key2": "xyz"
 }
 ```
 
-Now if the incoming request has `X-Request-Header-Authorization`:`key`, the forwarded request will append or replace the header `Authorization`: `abc`.
+## Example
 
+If your headers.json contains `{"api_key1": "1234567890"}` and the incoming request includes:
+```
+X-Request-URL: https://api.example-service.com/data
+X-Request-Method: GET
+X-Request-Key-Authorization: api_key1
+```
+
+The service will forward a GET request to https://api.example-service.com/data with the header `Authorization: 1234567890` added.
+
+All other original headers are preserved in the forwarded request.
