@@ -20,6 +20,8 @@ The forwarding details are extracted from specific headers in the incoming reque
 - `-s`: Enable HTTPS (requires server.crt and server.key in the current directory)
 - `-h FILE`: Path to JSON file containing key-value mappings
 
+- `-k SEED`: Enable validating incoming requests and use SEED for the key validation. The key is a combo of the seed, date (updated daily) all CRC32'd, see the code
+
 The headers file is a simple JSON dictionary mapping keyIDs to their values:
 
 ```json
